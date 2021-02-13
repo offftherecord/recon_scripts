@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+
+
+msg() {
+  echo -e "[assetrecon] $1" | wmsg -w "$SLACK"
+}
+
+
+msg_c() {
+  echo -e "[assetrecon] $1" | wmsg -w "$SLACK" -c
+}
+
+usage() {
+  echo "Usage: asset_recon <root_domains> <save_dir>"
+}
+
+# Check params
+if [ $# -lt 2 ]; then
+  echo "Missing params"
+  usage
+  exit 1
+fi
+
+savedir="$2"
+msg "Started $(date)"
+
+# make tmp workdir
+workdir="$(mktemp -d)" && cd "$workdir"
+
+# Subdomain enumeration
+while read -r domain
+do
+  msg "Scanning $domain"
+  amass enum -active -norecursive -nolocaldb -noalts -nocolor -timeout 60 -d "$domain" -o amass.log 2>/dev/null
+
+  # Weird null pointer or memory errors
+  if [ $? -ne 0 ]; then
+    msg "Error scanning $domain"
+    continue
+  fi
+
+  # Save uniqe domains only
+  domains=$(cat amass.log | anew "$savedir"/domains)
+  [[ ! -z "$domains" ]] && msg_c "New domains:\n$domains"
+
+  # Application Discovery
+  urls=$(cat amass.log | httprobe -c 500 -t 1000 -prefer-https -p large | anew "$savedir"/urls)
+  [[ ! -z "$urls" ]] && msg_c "New urls:\n$urls"
+
+done < "$1"
+
+# Cleanup
+rm -rf "$workdir"
+msg "Scan completed $(date)"
