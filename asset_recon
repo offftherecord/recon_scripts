@@ -44,8 +44,8 @@ do
   [[ ! -z "$domains" ]] && msg_c "New domains:\n$domains"
 
   # Application Discovery
-  urls=$(cat amass.log | httprobe -c 500 -t 1000 -prefer-https -p large | anew "$savedir"/urls)
-  [[ ! -z "$urls" ]] && msg_c "New urls:\n$urls"
+  apps=$(cat amass.log | httprobe -c 500 -t 1000 -prefer-https -p large | anew "$savedir"/apps)
+  [[ ! -z "$apps" ]] && msg_c "New apps:\n$apps"
 
 done < "$1"
 
